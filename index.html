@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Screenshot → PDF Maker</title>
+<style>
+:root{--bg:#f6f7f9;--card:#fff;--ink:#16181d;--mut:#6b7280;--line:#e2e5ea;--acc:#2563eb;--acc-ink:#fff;--danger:#dc2626;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f1115;--card:#1a1d24;--ink:#eceef2;--mut:#9aa1ae;--line:#2b303a;--acc:#4f8cff;--acc-ink:#0b1020;--danger:#f87171}}
+:root[data-theme="dark"]{--bg:#0f1115;--card:#1a1d24;--ink:#eceef2;--mut:#9aa1ae;--line:#2b303a;--acc:#4f8cff;--acc-ink:#0b1020;--danger:#f87171}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;line-height:1.4}
+main{max-width:720px;margin:0 auto;padding:16px 14px 110px}
+h1{font-size:20px;margin:6px 0 2px}
+p.sub{margin:0 0 14px;color:var(--mut);font-size:14px}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px;margin-bottom:12px}
+.btn{appearance:none;border:1px solid var(--line);background:var(--card);color:var(--ink);padding:12px 14px;border-radius:12px;font-size:15px;font-weight:600;cursor:pointer;min-height:46px}
+.btn.pri{background:var(--acc);color:var(--acc-ink);border-color:var(--acc)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.row{display:flex;gap:8px;flex-wrap:wrap}
+.row .btn{flex:1}
+label.lbl{display:block;font-size:13px;color:var(--mut);margin:0 0 6px}
+.seg{display:flex;gap:6px;flex-wrap:wrap}
+.seg button{flex:1;min-width:96px;padding:10px 8px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--ink);font-size:13px;font-weight:600}
+.seg button.on{background:var(--acc);color:var(--acc-ink);border-color:var(--acc)}
+#grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+@media(min-width:560px){#grid{grid-template-columns:repeat(3,1fr)}}
+.card{position:relative;background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.card .thumb{aspect-ratio:4/3;background:var(--bg);display:flex;align-items:center;justify-content:center}
+.card img{max-width:100%;max-height:100%;object-fit:contain;display:block}
+.card .bar{display:flex;align-items:center;justify-content:space-between;padding:4px 6px;font-size:12px;color:var(--mut)}
+.num{position:absolute;top:6px;left:6px;background:var(--acc);color:var(--acc-ink);font-weight:700;font-size:12px;border-radius:999px;min-width:24px;height:24px;display:flex;align-items:center;justify-content:center;padding:0 6px}
+.h{cursor:grab;touch-action:none;font-size:20px;padding:6px 10px;user-select:none;color:var(--ink)}
+.x{border:0;background:none;color:var(--danger);font-size:20px;padding:6px 10px;cursor:pointer}
+.ghost{opacity:.35}
+.empty{text-align:center;color:var(--mut);padding:26px 10px;font-size:14px}
+.dock{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--line);padding:10px 14px calc(10px + env(safe-area-inset-bottom,0px))}
+.dock .in{max-width:720px;margin:0 auto;display:flex;gap:8px;align-items:center}
+.dock .info{font-size:13px;color:var(--mut);flex:0 0 auto}
+.dock .btn{flex:1}
+#msg{font-size:13px;margin:8px 2px 0;min-height:18px;color:var(--mut)}
+input[type=text]{width:100%;padding:11px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--ink);font-size:15px}
+</style>
+</head>
+<body>
+<main>
+  <h1>Screenshot → PDF Maker</h1>
+  <p class="sub">Add screenshots, drag ⠿ to reorder, tap Create PDF. Everything stays on your phone.</p>
+
+  <div class="panel">
+    <input id="file" type="file" accept="image/*" multiple hidden>
+    <div class="row">
+      <button class="btn pri" id="add">＋ Add screenshots</button>
+      <button class="btn" id="clear">Clear all</button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <label class="lbl">Layout (A4 portrait)</label>
+    <div class="seg" id="layout">
+      <button data-v="stack" class="on">2 per page<br>stacked</button>
+      <button data-v="side">2 per page<br>side by side</button>
+      <button data-v="one">1 per page</button>
+    </div>
+    <label class="lbl" style="margin-top:12px">File name</label>
+    <input type="text" id="fname" value="Practical9_Output">
+  </div>
+
+  <div id="grid"></div>
+  <div class="empty" id="empty">No screenshots yet. Tap “Add screenshots” and select them from your gallery.</div>
+  <div id="msg"></div>
+</main>
+
+<div class="dock"><div class="in">
+  <span class="info" id="info">0 images</span>
+  <button class="btn pri" id="make" disabled>Create PDF</button>
+</div></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js"></script>
+<script>
+(function(){
+  var items=[], layout="stack", uid=0, MAXPX=2600;
+  var $=function(id){return document.getElementById(id)};
+  var grid=$("grid"), msg=$("msg");
+
+  function say(t){msg.textContent=t||""}
+
+  function loadImg(url){return new Promise(function(res,rej){var i=new Image();i.onload=function(){res(i)};i.onerror=function(){rej(new Error("bad image"))};i.src=url})}
+  function readDataURL(f){return new Promise(function(res,rej){var r=new FileReader();r.onload=function(){res(r.result)};r.onerror=rej;r.readAsDataURL(f)})}
+
+  // Keep PNG/JPEG as they are (lossless); convert other types to PNG; shrink only if huge
+  async function prep(file){
+    var objUrl=URL.createObjectURL(file), img;
+    try{ img=await loadImg(objUrl) } finally { URL.revokeObjectURL(objUrl) }
+    var w=img.naturalWidth, h=img.naturalHeight;
+    var okType=(file.type==="image/png"||file.type==="image/jpeg");
+    var big=Math.max(w,h)>MAXPX;
+    var data, fmt;
+    if(okType && !big){
+      data=await readDataURL(file); fmt=file.type==="image/png"?"PNG":"JPEG";
+    }else{
+      var s=big?MAXPX/Math.max(w,h):1, c=document.createElement("canvas");
+      c.width=Math.round(w*s); c.height=Math.round(h*s);
+      c.getContext("2d").drawImage(img,0,0,c.width,c.height);
+      data=c.toDataURL("image/png"); fmt="PNG"; w=c.width; h=c.height;
+    }
+    return {id:++uid,name:file.name,data:data,fmt:fmt,w:w,h:h};
+  }
+
+  function render(){
+    grid.innerHTML="";
+    items.forEach(function(it,i){
+      var d=document.createElement("div"); d.className="card"; d.dataset.id=it.id;
+      var n=document.createElement("div"); n.className="num"; n.textContent=i+1;
+      var t=document.createElement("div"); t.className="thumb";
+      var im=document.createElement("img"); im.src=it.data; im.alt=it.name; t.appendChild(im);
+      var b=document.createElement("div"); b.className="bar";
+      var h=document.createElement("span"); h.className="h"; h.textContent="⠿"; h.title="Drag to reorder";
+      var x=document.createElement("button"); x.className="x"; x.textContent="✕"; x.setAttribute("aria-label","Remove");
+      x.onclick=function(){items=items.filter(function(o){return o.id!==it.id});render()};
+      b.appendChild(h); b.appendChild(x);
+      d.appendChild(n); d.appendChild(t); d.appendChild(b); grid.appendChild(d);
+    });
+    var per=layout==="one"?1:2, pages=Math.ceil(items.length/per);
+    $("info").textContent=items.length+" image"+(items.length===1?"":"s")+" · "+pages+" page"+(pages===1?"":"s");
+    $("make").disabled=!items.length;
+    $("empty").style.display=items.length?"none":"block";
+  }
+
+  new Sortable(grid,{animation:150,handle:".h",ghostClass:"ghost",forceFallback:false,
+    onEnd:function(){
+      var order=[].map.call(grid.children,function(c){return +c.dataset.id});
+      items=order.map(function(id){return items.filter(function(o){return o.id===id})[0]});
+      render();
+    }});
+
+  $("add").onclick=function(){$("file").click()};
+  $("file").onchange=async function(e){
+    var files=[].slice.call(e.target.files).sort(function(a,b){return a.name.localeCompare(b.name,undefined,{numeric:true})});
+    e.target.value="";
+    if(!files.length) return;
+    say("Loading images…");
+    for(var i=0;i<files.length;i++){
+      try{items.push(await prep(files[i]))}catch(err){say("Couldn’t read "+files[i].name)}
+    }
+    say(""); render();
+  };
+  $("clear").onclick=function(){ if(items.length&&confirm("Remove all screenshots?")){items=[];render();say("")} };
+
+  [].forEach.call($("layout").children,function(btn){
+    btn.onclick=function(){
+      [].forEach.call($("layout").children,function(b){b.classList.remove("on")});
+      btn.classList.add("on"); layout=btn.dataset.v; render();
+    };
+  });
+
+  function boxesFor(){
+    var W=210,H=297,M=10,G=8;
+    if(layout==="one") return [[M,M,W-2*M,H-2*M]];
+    if(layout==="side"){var bw=(W-2*M-G)/2,bh=H-2*M;return [[M,M,bw,bh],[M+bw+G,M,bw,bh]]}
+    var bh2=(H-2*M-G)/2;
+    return [[M,M,W-2*M,bh2],[M,M+bh2+G,W-2*M,bh2]];
+  }
+
+  $("make").onclick=async function(){
+    if(!items.length) return;
+    var btn=$("make"); btn.disabled=true; say("Building PDF…");
+    try{
+      var jsPDF=window.jspdf.jsPDF, doc=new jsPDF({unit:"mm",format:"a4",orientation:"portrait",compress:true});
+      var boxes=boxesFor(), per=boxes.length;
+      for(var i=0;i<items.length;i++){
+        if(i>0 && i%per===0) doc.addPage();
+        var it=items[i], b=boxes[i%per];
+        var s=Math.min(b[2]/it.w,b[3]/it.h), w=it.w*s, h=it.h*s;
+        doc.addImage(it.data,it.fmt,b[0]+(b[2]-w)/2,b[1]+(b[3]-h)/2,w,h,undefined,"NONE");
+        await new Promise(function(r){setTimeout(r,0)});
+      }
+      var name=($("fname").value.trim()||"Output").replace(/[\\/:*?"<>|]/g,"_")+".pdf";
+      var blob=doc.output("blob");
+      var dl=null;
+      try{ dl=(window.claude&&await window.claude.use("downloads")) }catch(e){ dl=null }
+      if(dl){
+        await dl.save({filename:name,data:blob});
+        say("PDF ready: "+name);
+      }else{
+        // Fallback outside the hosted viewer: normal browser download
+        var a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=name;
+        document.body.appendChild(a); a.click(); a.remove();
+        say("PDF ready: "+name);
+      }
+    }catch(err){
+      say(err&&err.code==="declined"?"Save cancelled.":"Couldn’t create the PDF"+(err&&err.message?": "+err.message:"."));
+    }finally{ btn.disabled=!items.length }
+  };
+
+  render();
+})();
+</script>
+</body>
+</html>
