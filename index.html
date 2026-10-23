@@ -282,8 +282,8 @@ input[type=text]{width:100%;padding:11px;border-radius:10px;border:1px solid var
       for(var i=0;i<items.length;i++){
         if(i>0&&i%per===0) doc.addPage();
         var it=items[i], r=place(it,bx[i%per],o);
-        if(r.full&&!r.rot) doc.addImage(it.data,it.fmt,r.x,r.y,r.w,r.h,undefined,"NONE");
-        else doc.addImage(toPng(r),"PNG",r.x,r.y,r.w,r.h,undefined,"NONE");
+        if(r.full&&!r.rot) doc.addImage(it.data,it.fmt,r.x,r.y,r.w,r.h,undefined,"FAST");
+        else doc.addImage(toPng(r),"PNG",r.x,r.y,r.w,r.h,undefined,"FAST");
         await new Promise(function(f){setTimeout(f,0)});
       }
       var name=($("fname").value.trim()||"Output").replace(/[\\/:*?"<>|]/g,"_")+".pdf", blob=doc.output("blob"), dl=null;
